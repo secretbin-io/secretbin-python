@@ -4,8 +4,8 @@ from typing import Any, Dict, Optional, Type, TypeVar
 from pydantic import BaseModel
 from requests import request
 
-from config import Expires
-from errors import SecretBinError
+from secretbin.config import Expires
+from secretbin.errors import SecretBinError
 
 
 class ApiInfo(BaseModel):

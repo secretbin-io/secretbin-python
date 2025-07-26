@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 
-from api import (PostSecretPayload, _get_api_config, _get_api_info,
+from secretbin.api import (PostSecretPayload, _get_api_config, _get_api_info,
                            _post_secret)
 
-from .config import Config
-from .content import Secret
-from .errors import SecretBinError
+from .secretbin.config import Config
+from .secretbin.content import Secret
+from .secretbin.errors import SecretBinError
 
 
 @dataclass
