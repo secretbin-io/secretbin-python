@@ -1,0 +1,21 @@
+[project]
+name = "secretbin"
+version = "2.0.0"
+description = "Module for creating secrets in SecretBin"
+authors = [{ name = "Nihility.io (Marvin Peter)" }]
+license = { file = "LICENSE" }
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "base58>=2.1.1",
+    "cryptography>=45.0.5",
+    "pydantic>=2.11.7",
+    "requests>=2.32.4",
+]
+
+[project.urls]
+homepage = "https://github.com/Nihility-io/SecretBin"
+
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
