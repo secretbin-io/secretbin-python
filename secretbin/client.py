@@ -1,27 +1,8 @@
-from dataclasses import dataclass
-
-from secretbin.api import (PostSecretPayload, _get_api_config, _get_api_info,
-                           _post_secret)
-
-from .secretbin.config import Config
-from .secretbin.content import Secret
-from .secretbin.errors import SecretBinError
-
-
-@dataclass
-class Options:
-    """
-    Options for submitting a secret to SecretBin.
-
-    Attributes:
-        password: Password is used as an additional security step along the the encryption key (optional)
-        expires: Expires is the expiration time for the secret. Use [Client.get_config().expires] to get the available options.
-        burn_after: burn_after indicates after how many reads the secret should be deleted. 0 means no burn after reading.
-    """
-
-    password: str = ""
-    expires: str = ""
-    burn_after: int = 0
+from .api import (_get_api_config, _get_api_info, _post_secret,
+                  _PostSecretPayload)
+from .config import Config
+from .content import Secret
+from .errors import SecretBinError
 
 
 class SecretBin:
@@ -73,13 +54,15 @@ class SecretBin:
         """
         return self._config
 
-    def submit_secret(self, secret: Secret, options: Options) -> str:
+    def submit_secret(self, secret: Secret, password: str = "", expires: str = "", burn_after: int = 0) -> str:
         """
         submit_secret submits a new secret to the SecretBin server
 
         Args:
             secret (Secret): The secret to be submitted, containing the message and optional attachments.
-            options (Options): Options for submitting the secret, including password, expiration time, and burn after reading.
+            password (str): Optional password used to derive the encryption key along with a random base key.
+            expires (str): The expiration time for the secret. Use [SecretBin.config.expires] to get the available options.
+            burn_after (int): Indicates after how many reads the secret should be deleted. 0 means no burn after reading.
 
         Raises:
             SecretBinError: If the expiration time is invalid or not supported by the server.
@@ -89,24 +72,24 @@ class SecretBin:
         """
 
         # If no expiration time is set, use the server's default one.
-        if not options.expires:
-            options.expires = self.config.default_expires
+        if expires == "":
+            expires = self.config.default_expires
 
         # Validate the expiration time against the server's available options.
-        if options.expires not in self.config.expires:
+        if expires not in self.config.expires:
             raise SecretBinError(
                 name="InvalidExpirationTime",
-                message=f"Invalid expiration time '{options.expires}'. Valid options are: {list(self.config.expires.keys())}",
+                message=f"Invalid expiration time '{expires}'. Valid options are: {list(self.config.expires.keys())}",
             )
 
         # Encrypt the secret with the provided password and return the key and encrypted data.
-        key, enc = secret.encrypted(options.password)
+        key, enc = secret.encrypted(password)
 
         # Create the payload for the secret to be posted to SecretBin.
-        pl = PostSecretPayload(
-            expires=options.expires,
-            burnAfter=int(options.burn_after),
-            passwordProtected=bool(options.password),
+        pl = _PostSecretPayload(
+            expires=expires,
+            burnAfter=burn_after,
+            passwordProtected=password != "",
             data=enc,
         )
 

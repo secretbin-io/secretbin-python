@@ -8,38 +8,38 @@ from secretbin.config import Expires
 from secretbin.errors import SecretBinError
 
 
-class ApiInfo(BaseModel):
+class _ApiInfo(BaseModel):
     """JSON result for: GET /api/info"""
     version: str
 
 
-class ApiConfigBanner(BaseModel):
+class _ApiConfigBanner(BaseModel):
     """Partial JSON result for: GET /api/config"""
     enabled: bool
     type: str
     text: Dict[str, str]
 
 
-class ApiConfigBranding(BaseModel):
+class _ApiConfigBranding(BaseModel):
     """Partial JSON result for: GET /api/config"""
     appName: str
 
 
-class ApiConfigDefaults(BaseModel):
+class _ApiConfigDefaults(BaseModel):
     """Partial JSON result for: GET /api/config"""
     expires: str
 
 
-class ApiConfig(BaseModel):
+class _ApiConfig(BaseModel):
     """Partial JSON result for: GET /api/config"""
-    banner: ApiConfigBanner
-    branding: ApiConfigBranding
-    defaults: ApiConfigDefaults
+    banner: _ApiConfigBanner
+    branding: _ApiConfigBranding
+    defaults: _ApiConfigDefaults
     expires: Dict[str, Expires]
 
 
 @dataclass
-class PostSecretPayload:
+class _PostSecretPayload:
     """Payload for: POST /api/secret"""
     data: str
     expires: str
@@ -47,7 +47,7 @@ class PostSecretPayload:
     passwordProtected: bool
 
 
-class PostSecretResult(BaseModel):
+class _PostSecretResult(BaseModel):
     """JSON result for: POST /api/secret"""
     id: str
 
@@ -101,7 +101,7 @@ def _api_call(method: str, endpoint: str, path: str, payload: Optional[Any], res
     return result_cls(**res.json())
 
 
-def _get_api_info(endpoint: str) -> ApiInfo:
+def _get_api_info(endpoint: str) -> _ApiInfo:
     """
     _get_api_info retrieves the version information from the SecretBin server
 
@@ -112,10 +112,10 @@ def _get_api_info(endpoint: str) -> ApiInfo:
         ApiInfo: An instance of ApiInfo containing the version information.
     """
 
-    return _api_call("GET", endpoint, "/api/info", None, ApiInfo)
+    return _api_call("GET", endpoint, "/api/info", None, _ApiInfo)
 
 
-def _get_api_config(endpoint: str) -> ApiConfig:
+def _get_api_config(endpoint: str) -> _ApiConfig:
     """
     _get_api_config retrieves the configuration from the SecretBin server.
     This includes banner settings, branding, default expiration, and available expiration times.
@@ -127,10 +127,10 @@ def _get_api_config(endpoint: str) -> ApiConfig:
         ApiConfig: An instance of ApiConfig containing the server configuration.
     """
 
-    return _api_call("GET", endpoint, "/api/config", None, ApiConfig)
+    return _api_call("GET", endpoint, "/api/config", None, _ApiConfig)
 
 
-def _post_secret(endpoint: str, payload: PostSecretPayload) -> PostSecretResult:
+def _post_secret(endpoint: str, payload: _PostSecretPayload) -> _PostSecretResult:
     """
     _post_secret submits a new secret to the SecretBin server
 
@@ -142,4 +142,4 @@ def _post_secret(endpoint: str, payload: PostSecretPayload) -> PostSecretResult:
         PostSecretResult: An instance of PostSecretResult containing the ID of the created secret.
     """
 
-    return _api_call("POST", endpoint, "/api/secret", payload, PostSecretResult)
+    return _api_call("POST", endpoint, "/api/secret", payload, _PostSecretResult)
