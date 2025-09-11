@@ -1,8 +1,12 @@
+from semver import Version
+
 from .api import (_get_api_config, _get_api_info, _post_secret,
                   _PostSecretPayload)
 from .config import Config
 from .content import Secret
 from .errors import SecretBinError
+
+_min_cbor_version = Version.parse("3.1.0")
 
 
 class SecretBin:
@@ -30,7 +34,7 @@ class SecretBin:
             self._config = Config(
                 name=cfg.branding.appName,
                 endpoint=endpoint,
-                version=info.version,
+                version=Version.parse(info.version),
                 default_expires=cfg.defaults.expires,
                 expires=cfg.expires
             )
@@ -40,6 +44,10 @@ class SecretBin:
                     "type": cfg.banner.type,
                     "text": cfg.banner.text["en"]
                 }
+
+            # Use CBOR if using SecretBin v2.1.0 or newer
+            self._use_cbor = self._config.version.compare(
+                _min_cbor_version) != -1
 
         except Exception as e:
             raise e
@@ -83,7 +91,8 @@ class SecretBin:
             )
 
         # Encrypt the secret with the provided password and return the key and encrypted data.
-        key, enc = secret.encrypted(password)
+        key, enc, data_bytes = secret.encrypted(
+            password, use_cbor=self._use_cbor)
 
         # Create the payload for the secret to be posted to SecretBin.
         pl = _PostSecretPayload(
@@ -91,15 +100,16 @@ class SecretBin:
             burnAfter=burn_after,
             passwordProtected=password != "",
             data=enc,
+            dataBytes=data_bytes,
         )
-
+        
         # The SecretBin API uses -1 to indicate no burn after reading.
         # The value 0 is used to indicate that the secret should not be deleted by the server garbage collector.
         if pl.burnAfter == 0:
             pl.burnAfter = -1
 
         # Post the secret to the SecretBin server and retrieve the result.
-        r = _post_secret(self.endpoint, pl)
+        r = _post_secret(self.endpoint, pl, use_cbor=self._use_cbor)
 
         # Construct the URL to access the secret using the secret ID and the encryption key.
         return f"{self.endpoint}/secret/{r.id}#{key}"

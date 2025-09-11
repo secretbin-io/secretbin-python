@@ -1,6 +1,6 @@
 [project]
 name = "secretbin"
-version = "2.0.0"
+version = "2.1.0"
 description = "Module for creating secrets in SecretBin"
 authors = [{ name = "Nihility.io (Marvin Peter)" }]
 license = { file = "LICENSE" }
@@ -11,6 +11,8 @@ dependencies = [
     "cryptography>=45.0.5",
     "pydantic>=2.11.7",
     "requests>=2.32.4",
+    "semver>=3.0.4",
+    "cbor2>=5.7.0",
 ]
 
 [project.urls]

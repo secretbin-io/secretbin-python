@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
-
+from semver import Version
 
 @dataclass
 class Expires:
@@ -33,7 +33,7 @@ class Banner:
     Represents a banner that can be displayed on the SecretBin interface
 
     Attributes:
-        type: The type of banner ()"info", "warning", "error")
+        type: The type of banner ("info", "warning", "error")
         text: The text content of the banner
     """
     type: str
@@ -56,7 +56,7 @@ class Config:
 
     name: str
     endpoint: str
-    version: str
+    version: Version
     banner: Optional[Banner] = None
     expires: Dict[str, Expires] = field(default_factory=dict)
     default_expires: Optional[str] = None

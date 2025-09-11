@@ -35,3 +35,12 @@ class SecretBinError(BaseModel):
             bool: True if the other exception is a SecretBinError and has the same name, False otherwise
         """
         return isinstance(other, SecretBinError) and self.name == other.name
+
+
+class SecretBinException(Exception):
+    """
+    Exception for SecretBin API errors
+    """
+
+    def __init__(self, err: SecretBinError):
+        self.err = err

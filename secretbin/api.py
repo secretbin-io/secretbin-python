@@ -1,11 +1,13 @@
+import json
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Type, TypeVar
 
+import cbor2
 from pydantic import BaseModel
 from requests import request
 
 from secretbin.config import Expires
-from secretbin.errors import SecretBinError
+from secretbin.errors import SecretBinError, SecretBinException
 
 
 class _ApiInfo(BaseModel):
@@ -42,6 +44,7 @@ class _ApiConfig(BaseModel):
 class _PostSecretPayload:
     """Payload for: POST /api/secret"""
     data: str
+    dataBytes: bytes
     expires: str
     burnAfter: int
     passwordProtected: bool
@@ -55,7 +58,7 @@ class _PostSecretResult(BaseModel):
 T = TypeVar("T")
 
 
-def _api_call(method: str, endpoint: str, path: str, payload: Optional[Any], result_cls: Type[T]) -> T:
+def _api_call(method: str, endpoint: str, path: str, payload: Optional[Any], use_cbor: bool, result_cls: Type[T]) -> T:
     """
     _api_call is a generic function to make API calls to the SecretBin server
     It handles the HTTP request, response decoding, and error handling.
@@ -70,6 +73,7 @@ def _api_call(method: str, endpoint: str, path: str, payload: Optional[Any], res
             If None, no data is sent.
             If a dict, it is sent as JSON.
             If a dataclass, its __dict__ is used.
+        use_cbor (bool): Use CBOR instead of JSON
         result_cls (Type[T]): Expected type of the response body.
 
     Raises:
@@ -82,19 +86,24 @@ def _api_call(method: str, endpoint: str, path: str, payload: Optional[Any], res
     headers = {}
     data = None
     if payload is not None:
-        data = payload if isinstance(payload, dict) else payload.__dict__
-        headers["Content-Type"] = "application/json"
+        data_dict = payload if isinstance(payload, dict) else payload.__dict__
+        if use_cbor:
+            data = cbor2.dumps(data_dict)
+            headers["Content-Type"] = "application/cbor"
+        else:
+            data = json.dumps(data_dict).encode("utf-8")
+            headers["Content-Type"] = "application/json"
 
     res = request(
         method=method,
         url=f"{endpoint}{path}",
-        json=data,
+        data=data,
         headers=headers,
     )
 
     if res.status_code != 200:
         try:
-            raise SecretBinError(**res.json())
+            raise SecretBinException(SecretBinError(**res.json()))
         except Exception:
             res.raise_for_status()
 
@@ -112,7 +121,7 @@ def _get_api_info(endpoint: str) -> _ApiInfo:
         ApiInfo: An instance of ApiInfo containing the version information.
     """
 
-    return _api_call("GET", endpoint, "/api/info", None, _ApiInfo)
+    return _api_call("GET", endpoint, "/api/info", payload=None, use_cbor=False, result_cls=_ApiInfo)
 
 
 def _get_api_config(endpoint: str) -> _ApiConfig:
@@ -127,19 +136,20 @@ def _get_api_config(endpoint: str) -> _ApiConfig:
         ApiConfig: An instance of ApiConfig containing the server configuration.
     """
 
-    return _api_call("GET", endpoint, "/api/config", None, _ApiConfig)
+    return _api_call("GET", endpoint, "/api/config", payload=None, use_cbor=False, result_cls=_ApiConfig)
 
 
-def _post_secret(endpoint: str, payload: _PostSecretPayload) -> _PostSecretResult:
+def _post_secret(endpoint: str, payload: _PostSecretPayload, use_cbor: bool) -> _PostSecretResult:
     """
     _post_secret submits a new secret to the SecretBin server
 
     Args:
         endpoint (str): base URL of the SecretBin server, e.g. "https://secretbin.example.com"
         payload (PostSecretPayload): Payload containing the secret data and options
+        use_cbor (bool): Use CBOR instead of JSON
 
     Returns:
         PostSecretResult: An instance of PostSecretResult containing the ID of the created secret.
     """
 
-    return _api_call("POST", endpoint, "/api/secret", payload, _PostSecretResult)
+    return _api_call("POST", endpoint, "/api/secret", payload, use_cbor=use_cbor, result_cls=_PostSecretResult)

@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from os import path
 from typing import List
 
+import cbor2
 from base58 import b58encode
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -62,12 +63,14 @@ class Secret:
         content_type, _ = mimetypes.guess_type(file)
         self.add_attachment(path.basename(file), content_type or "", data)
 
-    def encrypted(self, password: str) -> tuple[str, str]:
+    def encrypted(self, password: str, use_cbor: bool) -> tuple[str, str, bytes]:
         """
         encrypted encrypts the secret content using AES-256-GCM and returns the base58 encoded key and a crypto URL.
 
         Args:
-            password (str): Optional password used to derive the encryption key along with a random base key
+            password (str): Optional password used to derive the encryption key along with a random base 
+            key
+            use_cbor (bool): Use CBOR instead of JSON
 
         Returns:
             tuple[str, str]: A tuple containing the base58 encoded base key and the crypto URL with the encrypted secret content.
@@ -89,13 +92,18 @@ class Secret:
             return {
                 "name": att.name,
                 "contentType": att.content_type,
-                "data": b64encode(att.data).decode("utf-8"),
+                "data": att.data if use_cbor else b64encode(att.data).decode("utf-8"),
             }
         secret_dict = {
             "message": self.message,
             "attachments": [attachment_to_dict(a) for a in self.attachments],
         }
-        data = json.dumps(secret_dict).encode("utf-8")
+
+        data = None
+        if use_cbor:
+            data = cbor2.dumps(secret_dict)
+        else:
+            data = json.dumps(secret_dict).encode("utf-8")
 
         # Generate random base key, IV, and salt
         base_key = secrets.token_bytes(32)
@@ -124,10 +132,16 @@ class Secret:
             f"&salt={b58encode(salt).decode()}"
             f"&iter={iter_count}"
             f"&hash=SHA-512#"
-            f"{b64encode(enc).decode()}"
         )
+
+        b: bytes = None
+
+        if use_cbor:
+            b = enc
+        if not use_cbor:
+            crypto_url += f"{b64encode(enc).decode()}"
 
         # Encode base key in base58
         base_key_b58 = b58encode(base_key).decode()
 
-        return base_key_b58, crypto_url
+        return base_key_b58, crypto_url, b
