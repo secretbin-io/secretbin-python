@@ -7,7 +7,7 @@ currently not supported.
 ## Installation
 
 ```bash
-pip3 install git+https://github.com/SecretBin-io/secretbin-python.git@v2.1.1
+pip3 install git+https://github.com/secretbin-io/secretbin-python.git@v2.1.1
 ```
 
 ## Usage
